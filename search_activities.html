@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Activity Search – Traveloop{% endblock %}
+{% block head %}
+<style>
+.search-header {
+  background: linear-gradient(135deg, rgba(232,168,56,0.1), rgba(123,175,143,0.06));
+  border: 1px solid var(--border); border-radius: 20px;
+  padding: 2.5rem; margin-bottom: 2rem; text-align: center;
+}
+.search-input-wrap {
+  position: relative; max-width: 600px; margin: 1.5rem auto 0;
+}
+.search-input-wrap i { position: absolute; left: 1.2rem; top: 50%; transform: translateY(-50%); color: var(--amber); font-size: 1.2rem; }
+.search-input {
+  width: 100%; padding: 1rem 1rem 1rem 3.5rem; border-radius: 30px;
+  background: var(--card-bg); border: 2px solid var(--border);
+  color: var(--sand); font-size: 1.1rem; outline: none; transition: all 0.3s;
+}
+.search-input:focus { border-color: var(--amber); box-shadow: 0 0 15px rgba(232,168,56,0.2); }
+.acts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; }
+.act-card {
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: 16px; padding: 1.5rem; transition: all 0.25s;
+  display: flex; flex-direction: column;
+}
+.act-card:hover { transform: translateY(-5px); border-color: var(--amber); box-shadow: var(--shadow); }
+.act-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1rem; }
+.act-icon {
+  width: 45px; height: 45px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center; font-size: 1.5rem;
+}
+.type-sightseeing { background: rgba(232,168,56,0.15); color: var(--amber); }
+.type-food { background: rgba(224,92,58,0.15); color: var(--coral); }
+.type-adventure { background: rgba(123,175,143,0.15); color: var(--sage); }
+.type-culture { background: rgba(184,201,192,0.15); color: var(--mist); }
+.type-transport { background: rgba(100,150,200,0.15); color: #6496C8; }
+.act-cost { font-size: 1.2rem; font-weight: 700; color: var(--amber); font-family: 'Playfair Display', serif; }
+.act-name { font-size: 1.1rem; color: var(--sand); margin-bottom: 0.3rem; font-weight: 600; }
+.act-type { font-size: 0.8rem; color: var(--mist); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.8rem; }
+.act-desc { font-size: 0.85rem; color: var(--mist); line-height: 1.5; flex: 1; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="container fade-up">
+  <div class="search-header">
+    <h1 class="page-title">Explore <span>Experiences</span></h1>
+    <p style="color:var(--mist);margin-top:0.5rem">Find the best activities, tours, and sights for your next trip</p>
+    <div class="search-input-wrap">
+      <i class="fas fa-search"></i>
+      <input type="text" class="search-input" id="actSearch" placeholder="Search activities..." oninput="doSearch(this.value)"/>
+    </div>
+  </div>
+
+  <div class="acts-grid" id="results"></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const typeIcons = {sightseeing:'🏛️',food:'🍽️',adventure:'🧗',culture:'🎭',transport:'🚆'};
+async function doSearch(q) {
+  const res = await fetch('/api/activities/search?q=' + encodeURIComponent(q));
+  const acts = await res.json();
+  const html = acts.map(a => `
+    <div class="act-card">
+      <div class="act-header">
+        <div class="act-icon type-${a.type}">${typeIcons[a.type] || '📍'}</div>
+        <div class="act-cost">$${a.cost.toFixed(0)}</div>
+      </div>
+      <div class="act-name">${a.name}</div>
+      <div class="act-type">${a.type} • ${a.duration_hours} hr</div>
+      <p class="act-desc">${a.description || 'A fantastic activity to add to your itinerary.'}</p>
+    </div>
+  `).join('');
+  document.getElementById('results').innerHTML = html || '<div class="empty-state"><div class="icon">🔍</div><h3>No activities found</h3><p>Try a different search term</p></div>';
+}
+doSearch('');
+</script>
+{% endblock %}

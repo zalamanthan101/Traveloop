@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}City Search – Traveloop{% endblock %}
+{% block head %}
+<style>
+.search-header {
+  background: linear-gradient(135deg, rgba(232,168,56,0.1), rgba(224,92,58,0.06));
+  border: 1px solid var(--border); border-radius: 20px;
+  padding: 2.5rem; margin-bottom: 2rem; text-align: center;
+}
+.search-input-wrap {
+  position: relative; max-width: 600px; margin: 1.5rem auto 0;
+}
+.search-input-wrap i { position: absolute; left: 1.2rem; top: 50%; transform: translateY(-50%); color: var(--amber); font-size: 1.2rem; }
+.search-input {
+  width: 100%; padding: 1rem 1rem 1rem 3.5rem; border-radius: 30px;
+  background: var(--card-bg); border: 2px solid var(--border);
+  color: var(--sand); font-size: 1.1rem; outline: none; transition: all 0.3s;
+}
+.search-input:focus { border-color: var(--amber); box-shadow: 0 0 15px rgba(232,168,56,0.2); }
+.cities-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
+.city-card {
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: 16px; overflow: hidden; transition: all 0.25s;
+}
+.city-card:hover { transform: translateY(-5px); border-color: var(--amber); box-shadow: var(--shadow); }
+.city-cover {
+  height: 120px; background: linear-gradient(135deg, var(--ocean), rgba(232,168,56,0.3));
+  display: flex; align-items: center; justify-content: center; font-size: 3.5rem;
+}
+.city-body { padding: 1.5rem; }
+.city-name { font-size: 1.3rem; color: var(--sand); margin-bottom: 0.2rem; }
+.city-region { font-size: 0.85rem; color: var(--mist); margin-bottom: 1rem; }
+.city-stats { display: flex; gap: 1rem; margin-bottom: 1.2rem; font-size: 0.8rem; }
+.stat { background: rgba(255,255,255,0.05); padding: 0.3rem 0.6rem; border-radius: 8px; color: var(--sand); }
+.stat i { color: var(--amber); margin-right: 0.3rem; }
+.desc { font-size: 0.85rem; color: var(--mist); line-height: 1.5; margin-bottom: 1.2rem; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="container fade-up">
+  <div class="search-header">
+    <h1 class="page-title">Discover <span>Destinations</span></h1>
+    <p style="color:var(--mist);margin-top:0.5rem">Search for cities, regions, or countries to add to your bucket list</p>
+    <div class="search-input-wrap">
+      <i class="fas fa-search"></i>
+      <input type="text" class="search-input" id="citySearch" placeholder="Search destinations..." oninput="doSearch(this.value)"/>
+    </div>
+  </div>
+
+  <div class="cities-grid" id="results"></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const emojis = ['🌍','🗼','⛩️','🗽','🏖️','🏔️','🏰','🌇'];
+async function doSearch(q) {
+  const res = await fetch('/api/cities/search?q=' + encodeURIComponent(q));
+  const cities = await res.json();
+  const html = cities.map((c, i) => `
+    <div class="city-card">
+      <div class="city-cover">${emojis[i % emojis.length]}</div>
+      <div class="city-body">
+        <h3 class="city-name">${c.name}</h3>
+        <p class="city-region">${c.country} • ${c.region || 'World'}</p>
+        <div class="city-stats">
+          <div class="stat"><i class="fas fa-wallet"></i> Cost: ${c.cost_index}/100</div>
+          <div class="stat"><i class="fas fa-fire"></i> Pop: ${c.popularity_score}/100</div>
+        </div>
+        <p class="desc">${c.description || 'A beautiful destination to explore.'}</p>
+        <a href="{{ url_for('create_trip') }}" class="btn btn-outline" style="width:100%;justify-content:center">Plan Trip Here</a>
+      </div>
+    </div>
+  `).join('');
+  document.getElementById('results').innerHTML = html || '<div class="empty-state"><div class="icon">🔍</div><h3>No cities found</h3><p>Try a different search term</p></div>';
+}
+doSearch('');
+</script>
+{% endblock %}

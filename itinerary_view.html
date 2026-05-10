@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% block title %}{{ trip.name }} – Itinerary{% endblock %}
+{% block head %}
+<style>
+.itin-header {
+  background: linear-gradient(135deg, rgba(232,168,56,0.1), rgba(224,92,58,0.06));
+  border: 1px solid var(--border); border-radius: 20px;
+  padding: 2rem 2.5rem; margin-bottom: 2rem;
+  display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;
+}
+.itin-header h1 { font-size: 2rem; margin-bottom: 0.4rem; }
+.itin-meta { display: flex; gap: 1.2rem; flex-wrap: wrap; margin-top: 0.5rem; }
+.itin-meta span { font-size: 0.85rem; color: var(--mist); display: flex; align-items: center; gap: 0.3rem; }
+.timeline { display: flex; flex-direction: column; gap: 0; }
+.stop-block { display: flex; gap: 1.5rem; }
+.timeline-line { display: flex; flex-direction: column; align-items: center; }
+.tl-dot {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--amber); flex-shrink: 0; margin-top: 0.3rem;
+  box-shadow: 0 0 0 4px rgba(232,168,56,0.2);
+}
+.tl-bar { width: 2px; flex: 1; background: linear-gradient(to bottom, var(--amber), rgba(232,168,56,0.1)); min-height: 60px; }
+.stop-content { flex: 1; padding-bottom: 2.5rem; }
+.stop-header { margin-bottom: 1rem; }
+.stop-title { font-size: 1.3rem; color: var(--sand); margin-bottom: 0.2rem; }
+.stop-dates { font-size: 0.82rem; color: var(--mist); }
+.activities-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.8rem; }
+.act-card {
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: 12px; padding: 1rem;
+}
+.act-card .act-icon { font-size: 1.4rem; margin-bottom: 0.4rem; }
+.act-card .act-name { font-size: 0.9rem; color: var(--sand); font-weight: 500; margin-bottom: 0.25rem; }
+.act-card .act-type { font-size: 0.75rem; color: var(--mist); }
+.act-card .act-cost { font-size: 0.85rem; color: var(--amber); font-weight: 600; margin-top: 0.4rem; }
+.no-acts { color: var(--mist); font-size: 0.85rem; font-style: italic; }
+.summary-bar {
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: 14px; padding: 1.2rem 1.8rem;
+  display: flex; gap: 2rem; flex-wrap: wrap; margin-bottom: 2rem;
+}
+.summary-item { display: flex; flex-direction: column; gap: 0.2rem; }
+.summary-item .s-val { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--amber); }
+.summary-item .s-label { font-size: 0.78rem; color: var(--mist); }
+</style>
+{% endblock %}
+{% block content %}
+<div class="container fade-up">
+  <div class="page-header">
+    {% if session.user_id %}
+    <a href="{{ url_for('itinerary_builder', trip_id=trip.id) }}" class="btn btn-ghost btn-sm"><i class="fas fa-arrow-left"></i> Back to Builder</a>
+    {% endif %}
+    <div style="display:flex;gap:0.7rem">
+      {% if session.user_id and session.user_id == trip.user_id %}
+      <button class="btn btn-ghost btn-sm" onclick="togglePublic({{ trip.id }}, this)">
+        <i class="fas fa-{% if trip.is_public %}lock{% else %}globe{% endif %}"></i>
+        {% if trip.is_public %}Make Private{% else %}Make Public{% endif %}
+      </button>
+      {% if trip.is_public %}
+      <button class="btn btn-outline btn-sm" onclick="copyLink()"><i class="fas fa-copy"></i> Copy Link</button>
+      {% endif %}
+      {% endif %}
+      <button class="btn btn-outline btn-sm" onclick="downloadPDF()"><i class="fas fa-file-pdf"></i> Download PDF</button>
+    </div>
+  </div>
+
+  <div class="itin-header">
+    <div>
+      <h1>{{ trip.name }}</h1>
+      {% if trip.description %}<p style="color:var(--mist);font-size:0.9rem">{{ trip.description }}</p>{% endif %}
+      <div class="itin-meta">
+        {% if trip.start_date %}<span><i class="fas fa-calendar"></i> {{ trip.start_date }} → {{ trip.end_date or '?' }}</span>{% endif %}
+        <span><i class="fas fa-map-pin"></i> {{ stops|length }} cities</span>
+        <span><i class="fas fa-wallet"></i> ${{ "%.0f"|format(total_cost) }} total</span>
+        {% if trip.is_public %}<span><i class="fas fa-globe"></i> Public</span>{% endif %}
+      </div>
+    </div>
+    <div style="font-size:3rem">🗺️</div>
+  </div>
+
+  <div class="summary-bar">
+    <div class="summary-item">
+      <span class="s-val">{{ stops|length }}</span>
+      <span class="s-label">Cities</span>
+    </div>
+    <div class="summary-item">
+      <span class="s-val">{{ stops|map(attribute='activities')|map('length')|sum }}</span>
+      <span class="s-label">Activities</span>
+    </div>
+    <div class="summary-item">
+      <span class="s-val">${{ "%.0f"|format(total_cost) }}</span>
+      <span class="s-label">Estimated Cost</span>
+    </div>
+  </div>
+
+  <div class="timeline">
+    {% for sw in stops %}
+    <div class="stop-block">
+      <div class="timeline-line">
+        <div class="tl-dot"></div>
+        {% if not loop.last %}<div class="tl-bar"></div>{% endif %}
+      </div>
+      <div class="stop-content">
+        <div class="stop-header">
+          <h2 class="stop-title">{{ sw.stop.city }}, {{ sw.stop.country }}</h2>
+          <div class="stop-dates">
+            {% if sw.stop.start_date %}{{ sw.stop.start_date }}{% if sw.stop.end_date %} → {{ sw.stop.end_date }}{% endif %}{% endif %}
+            {% if sw.cost %} &nbsp;·&nbsp; <span style="color:var(--amber)">${{ "%.0f"|format(sw.cost) }}</span>{% endif %}
+            &nbsp;·&nbsp; <span class="weather-badge" data-city="{{ sw.stop.city }}" style="color:var(--sage);"><i class="fas fa-spinner fa-spin"></i> Weather</span>
+          </div>
+        </div>
+        {% if sw.activities %}
+        <div class="activities-grid">
+          {% for a in sw.activities %}
+          {% set icons = {'sightseeing':'🏛️','food':'🍽️','adventure':'🧗','culture':'🎭','transport':'🚆'} %}
+          <div class="act-card">
+            <div class="act-icon">{{ icons.get(a.type, '📍') }}</div>
+            <div class="act-name">{{ a.name }}</div>
+            <div class="act-type">{{ a.type|capitalize }}</div>
+            {% if a.cost %}<div class="act-cost">${{ "%.0f"|format(a.cost) }}</div>{% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="no-acts">No activities added yet.</p>
+        {% endif %}
+      </div>
+    </div>
+    {% if not loop.last %}
+    <div class="stop-block" style="margin-bottom: 0;">
+      <div class="timeline-line">
+        <div class="tl-bar" style="min-height:30px; margin: 0 auto;"></div>
+      </div>
+      <div class="stop-content" style="padding-bottom: 1rem; padding-top: 0.5rem;">
+        <div style="background:rgba(255,255,255,0.03); padding:0.6rem 1rem; border-radius:8px; border:1px dashed var(--border); font-size:0.8rem; color:var(--mist); display:inline-block;">
+          🚆 Transit: <strong>{{ sw.stop.city }} → {{ stops[loop.index0 + 1].stop.city }}</strong>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+    {% if not stops %}
+    <div class="empty-state">
+      <div class="icon">🗺️</div>
+      <h3>No stops added</h3>
+      <p>Go to the builder to add cities and activities</p>
+      <br>
+      <a href="{{ url_for('itinerary_builder', trip_id=trip.id) }}" class="btn btn-primary">Open Builder</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function togglePublic(tripId, btn) {
+  const res = await fetch('/api/trips/'+tripId+'/toggle-public', {method:'POST'});
+  const data = await res.json();
+  location.reload();
+}
+function copyLink() {
+  const url = window.location.origin + '/share/{{ trip.id }}';
+  navigator.clipboard.writeText(url).then(()=>alert('Link copied! 🎉'));
+}
+
+async function fetchWeather() {
+  const badges = document.querySelectorAll('.weather-badge');
+  for (const badge of badges) {
+    const city = badge.dataset.city;
+    try {
+      // 1. Geocode
+      const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1`);
+      const geoData = await geoRes.json();
+      if (!geoData.results || geoData.results.length === 0) {
+        badge.innerHTML = '🌥️ N/A';
+        continue;
+      }
+      const lat = geoData.results[0].latitude;
+      const lon = geoData.results[0].longitude;
+      
+      // 2. Weather
+      const wxRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+      const wxData = await wxRes.json();
+      const temp = wxData.current_weather.temperature;
+      badge.innerHTML = `🌤️ ${temp}°C`;
+    } catch(e) {
+      badge.innerHTML = '🌥️ N/A';
+    }
+  }
+}
+fetchWeather();
+
+function downloadPDF() {
+  const element = document.querySelector('.container');
+  const header = document.querySelector('.page-header');
+  
+  // Temporarily hide the header buttons for the PDF
+  const originalDisplay = header.style.display;
+  header.style.display = 'none';
+  
+  const opt = {
+    margin:       0.5,
+    filename:     '{{ trip.name|replace(" ", "_") }}_Itinerary.pdf',
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, useCORS: true },
+    jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+  };
+  
+  // Generate and save PDF, then restore header
+  html2pdf().set(opt).from(element).save().then(() => {
+    header.style.display = originalDisplay || 'flex';
+  });
+}
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+{% endblock %}

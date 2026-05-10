@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}My Trips – Traveloop{% endblock %}
+{% block head %}
+<style>
+.trips-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; }
+.trip-card {
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+  transition: all 0.25s;
+}
+.trip-card:hover { border-color: rgba(232,168,56,0.5); box-shadow: var(--shadow); }
+.trip-cover {
+  height: 110px;
+  background: linear-gradient(135deg, var(--ocean), rgba(232,168,56,0.25));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 3rem; position: relative;
+}
+.public-pill {
+  position: absolute; top: 0.7rem; right: 0.7rem;
+  background: rgba(123,175,143,0.2); border: 1px solid rgba(123,175,143,0.4);
+  color: var(--sage); font-size: 0.72rem; font-weight: 600;
+  padding: 0.2rem 0.6rem; border-radius: 20px;
+}
+.trip-body { padding: 1.4rem; }
+.trip-name { font-size: 1.1rem; color: var(--sand); margin-bottom: 0.4rem; }
+.trip-desc { font-size: 0.83rem; color: var(--mist); margin-bottom: 0.8rem; line-height: 1.5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trip-meta { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 1rem; }
+.meta-chip {
+  background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+  padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.78rem; color: var(--mist);
+  display: flex; align-items: center; gap: 0.3rem;
+}
+.trip-actions { display: flex; gap: 0.6rem; }
+.btn-icon {
+  width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--border);
+  background: transparent; color: var(--mist); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.85rem; transition: all 0.2s; text-decoration: none;
+}
+.btn-icon:hover { border-color: var(--amber); color: var(--amber); }
+.btn-icon.danger:hover { border-color: var(--coral); color: var(--coral); }
+</style>
+{% endblock %}
+{% block content %}
+<div class="container fade-up">
+  <div class="page-header">
+    <h1 class="page-title">My <span>Trips</span></h1>
+    <a href="{{ url_for('create_trip') }}" class="btn btn-primary"><i class="fas fa-plus"></i> New Trip</a>
+  </div>
+
+  {% if trips %}
+  <div class="trips-grid">
+    {% set emojis = ['🗺️','✈️','🌍','🏖️','🏔️','🌆','🌏','🗼','🌴','⛩️'] %}
+    {% for trip in trips %}
+    <div class="trip-card">
+      <div class="trip-cover">
+        {{ emojis[loop.index0 % 10] }}
+        {% if trip.is_public %}<span class="public-pill">🌐 Public</span>{% endif %}
+      </div>
+      <div class="trip-body">
+        <h3 class="trip-name">{{ trip.name }}</h3>
+        {% if trip.description %}<p class="trip-desc">{{ trip.description }}</p>{% endif %}
+        <div class="trip-meta">
+          {% if trip.start_date %}
+          <span class="meta-chip"><i class="fas fa-calendar"></i> {{ trip.start_date }} → {{ trip.end_date or '?' }}</span>
+          {% endif %}
+          <span class="meta-chip"><i class="fas fa-map-pin"></i> {{ trip.stop_count }} stop{{ 's' if trip.stop_count != 1 }}</span>
+          {% if trip.total_budget %}
+          <span class="meta-chip"><i class="fas fa-wallet"></i> ${{ "%.0f"|format(trip.total_budget) }}</span>
+          {% endif %}
+        </div>
+        <div class="trip-actions">
+          <a href="{{ url_for('itinerary_view', trip_id=trip.id) }}" class="btn btn-ghost btn-sm"><i class="fas fa-eye"></i> View</a>
+          <a href="{{ url_for('itinerary_builder', trip_id=trip.id) }}" class="btn btn-outline btn-sm"><i class="fas fa-edit"></i> Edit</a>
+          <a href="{{ url_for('budget', trip_id=trip.id) }}" class="btn-icon" title="Budget"><i class="fas fa-wallet"></i></a>
+          <a href="{{ url_for('checklist', trip_id=trip.id) }}" class="btn-icon" title="Checklist"><i class="fas fa-check-square"></i></a>
+          <a href="{{ url_for('notes', trip_id=trip.id) }}" class="btn-icon" title="Notes"><i class="fas fa-sticky-note"></i></a>
+          <form method="POST" action="{{ url_for('delete_trip', trip_id=trip.id) }}" style="display:inline" onsubmit="return confirmDelete('Delete this trip and all its data?')">
+            <button type="submit" class="btn-icon danger" title="Delete"><i class="fas fa-trash"></i></button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="icon">✈️</div>
+    <h3>No trips yet</h3>
+    <p>Start planning your first adventure!</p>
+    <br>
+    <a href="{{ url_for('create_trip') }}" class="btn btn-primary"><i class="fas fa-plus"></i> Plan Your First Trip</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block title %}Checklist – {{ trip.name }}{% endblock %}
+{% block head %}
+<style>
+.checklist-layout { display: grid; grid-template-columns: 1fr 280px; gap: 1.5rem; align-items: start; }
+.cats { display: flex; flex-direction: column; gap: 1.5rem; }
+.cat-section h3 {
+  font-size: 0.85rem; font-weight: 600; color: var(--mist);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  margin-bottom: 0.7rem; display: flex; align-items: center; gap: 0.4rem;
+}
+.check-item {
+  display: flex; align-items: center; gap: 0.8rem;
+  padding: 0.7rem 1rem; border-radius: 10px;
+  background: var(--card-bg); border: 1px solid var(--border);
+  margin-bottom: 0.5rem; transition: all 0.2s;
+}
+.check-item.packed { opacity: 0.5; }
+.check-item.packed .item-label { text-decoration: line-through; }
+.check-box {
+  width: 20px; height: 20px; border-radius: 5px;
+  border: 2px solid var(--border); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: all 0.2s; background: transparent;
+  font-size: 0.7rem; color: var(--deep);
+}
+.check-box.checked { background: var(--sage); border-color: var(--sage); }
+.item-label { flex: 1; font-size: 0.9rem; }
+.del-btn {
+  background: none; border: none; cursor: pointer;
+  color: rgba(224,92,58,0.5); font-size: 0.8rem;
+  padding: 0.2rem; transition: color 0.2s;
+}
+.del-btn:hover { color: var(--coral); }
+.add-card {
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: 14px; padding: 1.3rem; position: sticky; top: 80px;
+}
+.add-card h3 { font-size: 1rem; margin-bottom: 1rem; }
+.progress-wrap { margin-bottom: 1.5rem; }
+.progress-text { display: flex; justify-content: space-between; font-size: 0.82rem; color: var(--mist); margin-bottom: 0.4rem; }
+.progress-bar { height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--sage), var(--amber)); border-radius: 4px; transition: width 0.5s; }
+.cat-icons { clothing:'👕', documents:'📄', electronics:'📱', toiletries:'🧴', general:'📦', medicines:'💊' }
+@media (max-width: 768px) { .checklist-layout { grid-template-columns: 1fr; } .add-card { position: relative; top: 0; } } </style>
+{% endblock %}
+{% block content %}
+<div class="container fade-up">
+  <div class="page-header">
+    <div style="display:flex;align-items:center;gap:1rem">
+      <a href="{{ url_for('itinerary_builder', trip_id=trip.id) }}" class="btn btn-ghost btn-sm"><i class="fas fa-arrow-left"></i></a>
+      <h1 class="page-title">Packing <span>Checklist</span></h1>
+    </div>
+  </div>
+
+  <div class="checklist-layout">
+    <div>
+      {% set categories = {} %}
+      {% for item in items %}
+        {% if item.category not in categories %}
+          {% set _ = categories.update({item.category: []}) %}
+        {% endif %}
+      {% endfor %}
+
+      {% set cat_icons = {'clothing':'👕','documents':'📄','electronics':'📱','toiletries':'🧴','medicines':'💊','general':'📦'} %}
+      {% set grouped = {} %}
+      {% for item in items %}
+        {% if item.category not in grouped %}{% set _ = grouped.update({item.category: []}) %}{% endif %}
+      {% endfor %}
+
+      {% for cat in ['clothing','documents','electronics','toiletries','medicines','general'] %}
+        {% set cat_items = items|selectattr('category','equalto',cat)|list %}
+        {% if cat_items %}
+        <div class="cats">
+        <div class="cat-section">
+          <h3>{{ cat_icons.get(cat,'📦') }} {{ cat|capitalize }}</h3>
+          {% for item in cat_items %}
+          <div class="check-item {% if item.packed %}packed{% endif %}" id="chk-{{ item.id }}">
+            <button class="check-box {% if item.packed %}checked{% endif %}" onclick="toggleItem({{ item.id }}, this)">
+              {% if item.packed %}✓{% endif %}
+            </button>
+            <span class="item-label">{{ item.item }}</span>
+            <button class="del-btn" onclick="deleteItem({{ item.id }}, this)"><i class="fas fa-times"></i></button>
+          </div>
+          {% endfor %}
+        </div>
+        </div>
+        {% endif %}
+      {% endfor %}
+
+      {% if not items %}
+      <div class="empty-state">
+        <div class="icon">🧳</div>
+        <h3>Checklist is empty</h3>
+        <p>Add items from the panel to get started</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <div>
+      <div class="add-card" style="margin-bottom:1rem">
+        {% set packed_count = items|selectattr('packed','equalto',1)|list|length %}
+        {% set total_count = items|length %}
+        <div class="progress-wrap">
+          <div class="progress-text">
+            <span>Progress</span>
+            <span>{{ packed_count }}/{{ total_count }}</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width:{{ ((packed_count/total_count*100)|int) if total_count else 0 }}%"></div>
+          </div>
+        </div>
+        <h3>➕ Add Item</h3>
+        <form method="POST">
+          <div class="form-group">
+            <input type="text" name="item" placeholder="e.g. Passport" required/>
+          </div>
+          <div class="form-group">
+            <label>Category</label>
+            <select name="category">
+              <option value="general">📦 General</option>
+              <option value="clothing">👕 Clothing</option>
+              <option value="documents">📄 Documents</option>
+              <option value="electronics">📱 Electronics</option>
+              <option value="toiletries">🧴 Toiletries</option>
+              <option value="medicines">💊 Medicines</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%">Add Item</button>
+        </form>
+      </div>
+
+      <div class="add-card">
+        <h3>💡 Suggested</h3>
+        {% set suggestions = ['Passport','Travel Insurance','Phone Charger','Universal Adapter','Sunscreen','Comfortable Shoes','Camera','First Aid Kit','Cash/Cards','Medications'] %}
+        <div style="display:flex;flex-wrap:wrap;gap:0.4rem">
+          {% for s in suggestions %}
+          <form method="POST" style="display:inline">
+            <input type="hidden" name="item" value="{{ s }}"/>
+            <input type="hidden" name="category" value="general"/>
+            <button type="submit" class="badge badge-amber" style="cursor:pointer;border:none;font-size:0.75rem;padding:0.3rem 0.7rem">{{ s }}</button>
+          </form>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function updateProgress() {
+  const total = document.querySelectorAll('.check-item').length;
+  const packed = document.querySelectorAll('.check-item.packed').length;
+  document.querySelector('.progress-text span:last-child').textContent = `${packed}/${total}`;
+  const pct = total === 0 ? 0 : Math.round((packed / total) * 100);
+  document.querySelector('.progress-fill').style.width = `${pct}%`;
+}
+
+async function toggleItem(id, btn) {
+  await fetch('/api/checklist/'+id+'/toggle', {method:'POST'});
+  const row = document.getElementById('chk-'+id);
+  row.classList.toggle('packed');
+  btn.classList.toggle('checked');
+  btn.textContent = btn.classList.contains('checked') ? '✓' : '';
+  updateProgress();
+}
+async function deleteItem(id, btn) {
+  await fetch('/api/checklist/'+id, {method:'DELETE'});
+  document.getElementById('chk-'+id)?.remove();
+  updateProgress();
+}
+</script>
+{% endblock %}

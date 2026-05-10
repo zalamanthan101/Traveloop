@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Profile – Traveloop{% endblock %}
+{% block head %}
+<style>
+.profile-wrap { max-width: 560px; margin: 0 auto; }
+.profile-header {
+  text-align: center;
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: 20px; padding: 2.5rem; margin-bottom: 1.5rem;
+}
+.avatar-large {
+  width: 80px; height: 80px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--amber), var(--coral));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2rem; font-weight: 700; color: var(--deep);
+  margin: 0 auto 1rem;
+}
+.profile-form {
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: 16px; padding: 1.8rem;
+}
+.divider { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+.info-row { display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0; font-size: 0.88rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.info-row:last-child { border-bottom: none; }
+.info-row .label { color: var(--mist); }
+.info-row .value { color: var(--sand); }
+</style>
+{% endblock %}
+{% block content %}
+<div class="container fade-up">
+  <div class="profile-wrap">
+    <div class="page-header">
+      <h1 class="page-title">My <span>Profile</span></h1>
+    </div>
+    <div class="profile-header">
+      <div class="avatar-large">{{ user.name[0].upper() }}</div>
+      <h2 style="font-size:1.5rem">{{ user.name }}</h2>
+      <p style="color:var(--mist);font-size:0.9rem">{{ user.email }}</p>
+    </div>
+    <div class="profile-form">
+      <h3 style="margin-bottom:1.2rem;font-size:1rem">Update Profile</h3>
+      <form method="POST">
+        <div class="form-group">
+          <label>Display Name</label>
+          <input type="text" name="name" value="{{ user.name }}" required/>
+        </div>
+        <div class="form-group">
+          <label>Email (read-only)</label>
+          <input type="email" value="{{ user.email }}" disabled style="opacity:0.5"/>
+        </div>
+        <button type="submit" class="btn btn-primary" style="margin-top:1rem;width:100%;justify-content:center">Save Changes</button>
+      </form>
+    </div>
+
+    <div class="profile-card" style="margin-top: 1.5rem;">
+      <h3 style="margin-bottom:1rem;font-size:1rem">Account Info</h3>
+      <div class="info-row"><span class="label">Member since</span><span class="value">{{ (user.created_at|string)[:10] }}</span></div>
+      <div class="info-row"><span class="label">Account</span><span class="value badge badge-sage">Active</span></div>
+      <hr class="divider"/>
+      <a href="{{ url_for('logout') }}" class="btn btn-danger" style="display:inline-flex"><i class="fas fa-sign-out-alt"></i> Sign Out</a>
+    </div>
+
+    <div class="profile-card" style="margin-top: 1.5rem; background: rgba(224,92,58,0.05); border-color: rgba(224,92,58,0.2);">
+      <h3 style="color:var(--coral)">Danger Zone</h3>
+      <p style="font-size:0.85rem;color:var(--mist);margin-bottom:1rem">Once you delete your account, there is no going back. Please be certain.</p>
+      <button class="btn btn-outline" style="border-color:var(--coral);color:var(--coral)" onclick="deleteAccount()">Delete Account</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function deleteAccount() {
+  if (confirm('Are you absolutely sure you want to delete your account? All your trips and data will be permanently erased.')) {
+    const res = await fetch('/api/profile/delete', { method: 'POST' });
+    if (res.ok) {
+      window.location.href = '/';
+    }
+  }
+}
+</script>
+{% endblock %}

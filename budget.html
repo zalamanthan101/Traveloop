@@ -1,0 +1,341 @@
+{% extends "base.html" %}
+{% block title %}Budget – {{ trip.name }}{% endblock %}
+{% block head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+.budget-layout { display: grid; grid-template-columns: 1fr 340px; gap: 1.5rem; align-items: start; }
+.budget-summary {
+  background: linear-gradient(135deg, rgba(232,168,56,0.12), rgba(224,92,58,0.06));
+  border: 1px solid var(--border); border-radius: 20px;
+  padding: 2rem; margin-bottom: 1.5rem;
+  display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; text-align: center;
+}
+.sum-item .sum-val {
+  font-family: 'Playfair Display', serif; font-size: 2rem; color: var(--amber);
+}
+.sum-item .sum-label { font-size: 0.8rem; color: var(--mist); margin-top: 0.2rem; }
+.city-budget-card {
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: 14px; padding: 1.3rem; margin-bottom: 1rem;
+}
+.city-budget-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 0.8rem;
+}
+.city-budget-header h3 { font-size: 1rem; color: var(--sand); }
+.city-cost { color: var(--amber); font-weight: 700; font-size: 1.1rem; }
+.act-budget-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0.45rem 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 0.85rem;
+}
+.act-budget-row:last-child { border-bottom: none; }
+.act-budget-row .aname { color: var(--mist); }
+.act-budget-row .acost { color: var(--sand); font-weight: 500; }
+.progress-bar { height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; margin-top: 0.6rem; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--amber), var(--coral)); transition: width 0.8s ease; }
+.chart-card {
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: 14px; padding: 1.3rem; position: sticky; top: 80px;
+}
+.chart-card h3 { font-size: 1rem; margin-bottom: 1rem; }
+.alert-card {
+  background: rgba(232,168,56,0.08); border: 1px solid rgba(232,168,56,0.25);
+  border-radius: 12px; padding: 1rem 1.2rem;
+  font-size: 0.85rem; color: var(--amber);
+  margin-bottom: 1rem;
+}
+@media (max-width: 768px) { .budget-layout { grid-template-columns: 1fr; } .stats-bar { grid-template-columns: 1fr; } .main-col { order: 2; } .sidebar { order: 1; margin-bottom: 1rem; } } </style>
+{% endblock %}
+{% block content %}
+<div class="container fade-up">
+  <div class="page-header">
+    <div style="display:flex;align-items:center;gap:1rem">
+      <a href="{{ url_for('itinerary_builder', trip_id=trip.id) }}" class="btn btn-ghost btn-sm"><i class="fas fa-arrow-left"></i></a>
+      <h1 class="page-title">Budget <span>Breakdown</span></h1>
+    </div>
+    <div style="display:flex;align-items:center;gap:0.5rem">
+      <label style="font-size:0.8rem;color:var(--mist)">Currency:</label>
+      <select id="currency-select" class="btn btn-ghost btn-sm" style="padding:0.3rem 0.5rem;border-radius:8px" onchange="updateCurrency()">
+        <option value="USD" data-sym="$" {% if auto_currency=='USD' %}selected{% endif %}>🇺🇸 USD</option>
+        <option value="INR" data-sym="₹" {% if auto_currency=='INR' %}selected{% endif %}>🇮🇳 INR</option>
+        <option value="EUR" data-sym="€" {% if auto_currency=='EUR' %}selected{% endif %}>🇪🇺 EUR</option>
+        <option value="GBP" data-sym="£" {% if auto_currency=='GBP' %}selected{% endif %}>🇬🇧 GBP</option>
+        <option value="JPY" data-sym="¥" {% if auto_currency=='JPY' %}selected{% endif %}>🇯🇵 JPY</option>
+        <option value="AUD" data-sym="A$" {% if auto_currency=='AUD' %}selected{% endif %}>🇦🇺 AUD</option>
+        <option value="CAD" data-sym="CA$" {% if auto_currency=='CAD' %}selected{% endif %}>🇨🇦 CAD</option>
+        <option value="SGD" data-sym="S$" {% if auto_currency=='SGD' %}selected{% endif %}>🇸🇬 SGD</option>
+        <option value="THB" data-sym="฿" {% if auto_currency=='THB' %}selected{% endif %}>🇹🇭 THB</option>
+        <option value="AED" data-sym="AED" {% if auto_currency=='AED' %}selected{% endif %}>🇦🇪 AED</option>
+        <option value="TRY" data-sym="₺" {% if auto_currency=='TRY' %}selected{% endif %}>🇹🇷 TRY</option>
+        <option value="CHF" data-sym="CHF" {% if auto_currency=='CHF' %}selected{% endif %}>🇨🇭 CHF</option>
+        <option value="KRW" data-sym="₩" {% if auto_currency=='KRW' %}selected{% endif %}>🇰🇷 KRW</option>
+        <option value="IDR" data-sym="Rp" {% if auto_currency=='IDR' %}selected{% endif %}>🇮🇩 IDR</option>
+        <option value="BRL" data-sym="R$" {% if auto_currency=='BRL' %}selected{% endif %}>🇧🇷 BRL</option>
+        <option value="ZAR" data-sym="R" {% if auto_currency=='ZAR' %}selected{% endif %}>🇿🇦 ZAR</option>
+      </select>
+      {% if auto_currency != 'USD' %}
+      <span style="font-size:0.72rem;color:var(--sage);background:rgba(123,175,143,0.1);padding:0.2rem 0.5rem;border-radius:5px;">Auto-detected</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="budget-summary">
+    <div class="sum-item">
+      <div class="sum-val"><span class="c-sym">$</span><span class="c-val" data-usd="{{ total }}">{{ "%.0f"|format(total) }}</span></div>
+      <div class="sum-label">💰 Activities Cost</div>
+    </div>
+    <div class="sum-item">
+      <div class="sum-val"><span class="c-sym">$</span><span class="c-val" data-usd="{{ trip.total_budget }}">{{ "%.0f"|format(trip.total_budget) }}</span></div>
+      <div class="sum-label">🎯 Set Budget</div>
+    </div>
+    <div class="sum-item">
+      <div class="sum-val" style="color:{% if total > trip.total_budget %}var(--coral){% else %}var(--sage){% endif %}">
+        <span class="c-sym">$</span><span class="c-val" data-usd="{{ (trip.total_budget - total)|abs }}">{{ "%.0f"|format((trip.total_budget - total)|abs) }}</span>
+      </div>
+      <div class="sum-label">{% if total > trip.total_budget %}⚠️ Over Budget{% else %}✅ Remaining{% endif %}</div>
+    </div>
+  </div>
+
+  {% if total > trip.total_budget and trip.total_budget > 0 %}
+  <div class="alert-card">⚠️ You're over budget by <span class="c-sym">$</span><span class="c-val" data-usd="{{ total - trip.total_budget }}">{{ "%.0f"|format(total - trip.total_budget) }}</span>. Consider adjusting your activities.</div>
+  {% endif %}
+
+  <div class="budget-layout">
+    <div>
+      {% for b in breakdown %}
+      <div class="city-budget-card">
+        <div class="city-budget-header">
+          <h3>📍 {{ b.city }}</h3>
+          <span class="city-cost"><span class="c-sym">$</span><span class="c-val" data-usd="{{ b.cost }}">{{ "%.0f"|format(b.cost) }}</span></span>
+        </div>
+        {% if b.activities %}
+          {% for a in b.activities %}
+          <div class="act-budget-row">
+            <span class="aname">{{ a.name }} <small style="opacity:0.5">({{ a.type }})</small></span>
+            <span class="acost"><span class="c-sym">$</span><span class="c-val" data-usd="{{ a.cost }}">{{ "%.0f"|format(a.cost) }}</span></span>
+          </div>
+          {% endfor %}
+          {% if total > 0 %}
+          <div class="progress-bar">
+            <div class="progress-fill" style="width:{{ [((b.cost/total)*100)|int, 100]|min }}%"></div>
+          </div>
+          <div style="text-align:right;font-size:0.72rem;color:var(--mist);margin-top:0.3rem">{{ ((b.cost/total)*100)|int }}% of total</div>
+          {% endif %}
+        {% else %}
+          <p style="color:var(--mist);font-size:0.83rem;font-style:italic">No activities with costs</p>
+        {% endif %}
+      </div>
+      {% endfor %}
+      {% if not breakdown %}
+      <div class="empty-state">
+        <div class="icon">💰</div>
+        <h3>No budget data yet</h3>
+        <p>Add cities and activities with costs to see the breakdown</p>
+      </div>
+      {% endif %}
+      <div class="city-budget-card">
+        <div class="city-budget-header">
+          <h3>➕ Additional Expenses</h3>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:0.3rem;font-size:0.75rem;color:var(--mist);padding:0.3rem 0;border-bottom:1px solid var(--border);margin-bottom:0.3rem;">
+          <span>Category</span><span>Estimated</span><span style="color:var(--amber);">Actual</span><span></span>
+        </div>
+        <div id="manual-budget-items">
+          {% for bi in budget_items %}
+          <div class="act-budget-row" style="padding:0.5rem 0;display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:0.3rem;align-items:center">
+            <span class="aname" style="font-size:0.83rem;">{{ bi.category|capitalize }}</span>
+            <span class="acost"><span class="c-sym">$</span><span class="c-val" data-usd="{{ bi.estimated_cost }}">{{ "%.0f"|format(bi.estimated_cost) }}</span></span>
+            <span id="actual-{{ bi.id }}" onclick="editActual({{ bi.id }}, {{ bi.actual_cost }}, this)" style="color:{% if bi.actual_cost > bi.estimated_cost %}var(--coral){% elif bi.actual_cost > 0 %}var(--sage){% else %}var(--mist){% endif %};cursor:pointer;font-size:0.83rem;" title="Click to set actual cost">
+              {% if bi.actual_cost > 0 %}<span class="c-sym">$</span>{{ "%.0f"|format(bi.actual_cost) }}{% else %}<i class="fas fa-pencil-alt" style="font-size:0.7rem;"></i> Set{% endif %}
+            </span>
+            <button onclick="deleteBudgetItem({{ bi.id }})" style="background:none;border:none;color:var(--coral);cursor:pointer">✕</button>
+          </div>
+          {% endfor %}
+          {% if not budget_items %}
+          <p style="color:var(--mist);font-size:0.83rem;font-style:italic">Use the form below to add flights, hotels, etc.</p>
+          {% endif %}
+        </div>
+      </div>
+      
+      <div class="city-budget-card" style="margin-top: 2rem">
+        <h3>Add Expense</h3>
+        <form id="add-budget-form" style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.8rem;">
+          <div class="form-group" style="margin: 0">
+            <label>Category</label>
+            <select id="b-category" required>
+              <option value="transport">✈️ Transport & Flights</option>
+              <option value="accommodation">🏨 Accommodation</option>
+              <option value="activities">🎟️ Activities</option>
+              <option value="meals">🍽️ Meals & Dining</option>
+              <option value="other">📦 Other</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin: 0">
+            <label>Estimated Cost (USD)</label>
+            <input type="number" id="b-cost" min="0" step="5" required/>
+          </div>
+          <button type="button" class="btn btn-primary" onclick="addBudgetItem()">Add Expense</button>
+        </form>
+      </div>
+
+    </div>
+
+    <div class="chart-card">
+      <h3>Cost by City</h3>
+      <canvas id="pieChart" height="220"></canvas>
+      <div style="margin-top:1rem;display:flex;flex-direction:column;gap:0.4rem">
+        {% for b in breakdown if b.cost > 0 %}
+        <div style="display:flex;justify-content:space-between;font-size:0.82rem">
+          <span style="color:var(--mist)">{{ b.city }}</span>
+          <span style="color:var(--sand)"><span class="c-sym">$</span><span class="c-val" data-usd="{{ b.cost }}">{{ "%.0f"|format(b.cost) }}</span></span>
+        </div>
+        {% endfor %}
+      </div>
+      <hr style="border:none;border-top:1px solid var(--border);margin:1.2rem 0;">
+      <h3>🤖 AI Budget Advisor</h3>
+      <p style="font-size:0.78rem;color:var(--mist);margin-bottom:0.8rem;">Smart budget suggestions for your destinations.</p>
+      <button class="btn btn-primary" style="width:100%;" onclick="getAISuggestions()" id="ai-budget-btn">
+        <i class="fas fa-magic"></i> Suggest Budget
+      </button>
+      <div id="ai-suggestions" style="margin-top:1rem;display:flex;flex-direction:column;gap:0.5rem;"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const tripId = {{ trip.id }};
+
+async function addBudgetItem() {
+  const cat = document.getElementById('b-category').value;
+  const cost = parseFloat(document.getElementById('b-cost').value);
+  if (!cost) return;
+  
+  const res = await fetch('/api/budget_items', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ trip_id: tripId, category: cat, estimated_cost: cost })
+  });
+  if (res.ok) {
+    location.reload();
+  }
+}
+
+async function deleteBudgetItem(id) {
+  if (!confirm('Remove this expense?')) return;
+  const res = await fetch('/api/budget_items/' + id, { method: 'DELETE' });
+  if (res.ok) {
+    location.reload();
+  }
+}
+
+const cities = [{% for b in breakdown if b.cost > 0 %}"{{ b.city }}", {% endfor %}{% if budget_items %}"Additional", {% endif %}];
+const costs  = [{% for b in breakdown if b.cost > 0 %}{{ "%.2f"|format(b.cost) }}, {% endfor %}{% if budget_items %}{{ budget_items|map(attribute='estimated_cost')|sum }}, {% endif %}];
+const colors = ['#E8A838','#E05C3A','#7BAF8F','#6496C8','#B8C9C0','#F5C066'];
+if (cities.length > 0) {
+  new Chart(document.getElementById('pieChart'), {
+    type: 'doughnut',
+    data: {
+      labels: cities,
+      datasets: [{ data: costs, backgroundColor: colors.slice(0, cities.length), borderWidth: 0 }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      cutout: '65%',
+    }
+  });
+}
+
+// Currency Converter Logic
+let exchangeRates = {{ exchange_rates|tojson }};
+async function fetchRates() {
+  try {
+    const res = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+    const data = await res.json();
+    if (data && data.rates) {
+      exchangeRates = { ...exchangeRates, ...data.rates };
+    }
+  } catch(e) {
+    console.warn('Using bundled exchange rates');
+  }
+  return exchangeRates;
+}
+
+function updateCurrency() {
+  const select = document.getElementById('currency-select');
+  const currency = select.value;
+  const sym = select.options[select.selectedIndex].dataset.sym;
+  const rate = exchangeRates[currency] || 1;
+  
+  document.querySelectorAll('.c-sym').forEach(el => el.textContent = sym);
+  document.querySelectorAll('.c-val').forEach(el => {
+    const usd = parseFloat(el.dataset.usd);
+    if(!isNaN(usd)) {
+      el.textContent = (usd * rate).toFixed(0);
+    }
+  });
+}
+
+// Auto-detected currency from trip destination
+const AUTO_CURRENCY = "{{ auto_currency }}";
+
+// Fetch rates on load, then auto-apply detected currency
+fetchRates().then(() => {
+  if (AUTO_CURRENCY !== 'USD') {
+    const sel = document.getElementById('currency-select');
+    sel.value = AUTO_CURRENCY;
+    updateCurrency();
+  }
+});
+
+// Actual Cost editing
+async function editActual(id, current, el) {
+  const val = prompt('Enter actual cost spent (USD):', current || 0);
+  if (val === null) return;
+  const actual = parseFloat(val) || 0;
+  await fetch(`/api/budget_items/${id}/actual`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({actual_cost: actual})
+  });
+  location.reload();
+}
+
+// AI Budget Suggestions
+async function getAISuggestions() {
+  const btn = document.getElementById('ai-budget-btn');
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Thinking...';
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/suggest_budget', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({trip_id: tripId})
+    });
+    const data = await res.json();
+    const container = document.getElementById('ai-suggestions');
+    container.innerHTML = '';
+    if (!res.ok || !data.suggestions || !data.suggestions.length) {
+      throw new Error(data.error || 'No suggestions available');
+    }
+    (data.suggestions || []).forEach(s => {
+      container.innerHTML += `<div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;padding:0.6rem 0.8rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:0.85rem;color:var(--sand);">${s.category}</span>
+          <span style="color:var(--amber);font-weight:600;font-size:0.85rem;">~$${s.estimated_per_day}/day</span>
+        </div>
+        <div style="font-size:0.75rem;color:var(--mist);margin-top:0.2rem;">Tip: ${s.tip}</div>
+      </div>`;
+    });
+    if (data.source === 'fallback') {
+      container.innerHTML += '<p style="color:var(--sage);font-size:0.75rem;">AI is offline, so starter suggestions were generated locally.</p>';
+    }
+  } catch(e) {
+    document.getElementById('ai-suggestions').innerHTML = '<p style="color:var(--coral);font-size:0.8rem;">Could not load suggestions. Please try again.</p>';
+  }
+  btn.innerHTML = '<i class="fas fa-magic"></i> Suggest Budget';
+  btn.disabled = false;
+}
+</script>
+{% endblock %}

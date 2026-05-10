@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Traveloop Admin Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+<style>
+:root {
+  --sand: #F5EDD6;
+  --deep: #1A1A2E;
+  --ocean: #16213E;
+  --amber: #E8A838;
+  --amber-light: #F5C066;
+  --coral: #E05C3A;
+  --sage: #7BAF8F;
+  --mist: #B8C9C0;
+  --white: #FDFAF4;
+  --panel: rgba(255,255,255,0.06);
+  --panel-strong: rgba(255,255,255,0.09);
+  --line: rgba(232,168,56,0.2);
+  --soft: rgba(255,255,255,0.04);
+  --shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  min-height: 100vh;
+  background: var(--deep);
+  color: var(--sand);
+  font-family: 'DM Sans', sans-serif;
+  background-image:
+    radial-gradient(ellipse at 20% 20%, rgba(232,168,56,0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(22,33,62,0.9) 0%, transparent 50%);
+}
+.admin-shell { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+.sidebar {
+  background: rgba(22,33,62,0.92);
+  color: var(--mist);
+  padding: 1.25rem;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  border-right: 1px solid var(--line);
+  backdrop-filter: blur(18px);
+}
+.brand {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.55rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, var(--amber), var(--coral));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 0.35rem;
+}
+.role { color: var(--mist); font-size: 0.85rem; margin-bottom: 2rem; }
+.side-link {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
+  color: var(--mist);
+  border: 0;
+  background: transparent;
+  padding: 0.8rem 0.9rem;
+  border-radius: 8px;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: none;
+  margin-bottom: 0.25rem;
+}
+.side-link:hover, .side-link.active { background: rgba(232,168,56,0.12); color: var(--amber); }
+.logout {
+  position: absolute;
+  left: 1.25rem;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  color: var(--coral);
+}
+.main { padding: 1.5rem; overflow: hidden; }
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 2rem;
+  line-height: 1.1;
+}
+.admin-name { color: var(--mist); font-size: 0.92rem; margin-top: 0.3rem; }
+.search {
+  max-width: 340px;
+  width: 100%;
+  position: relative;
+}
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.currency-control {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.45rem 0.65rem;
+  background: rgba(255,255,255,0.05);
+  color: var(--mist);
+}
+.currency-control i { color: var(--amber); }
+.currency-control select {
+  border: 0;
+  background: transparent;
+  color: var(--sand);
+  font: inherit;
+  font-weight: 700;
+  outline: none;
+}
+.currency-control option { background: var(--ocean); color: var(--sand); }
+.search i { position: absolute; top: 50%; left: 0.85rem; transform: translateY(-50%); color: var(--amber); }
+.search input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem 0.75rem 2.35rem;
+  font: inherit;
+  background: rgba(255,255,255,0.05);
+  color: var(--sand);
+}
+.search input:focus { outline: none; border-color: var(--amber); box-shadow: 0 0 0 3px rgba(232,168,56,0.1); }
+.search input::placeholder { color: rgba(184,201,192,0.45); }
+.stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.stat {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 1.1rem;
+  box-shadow: var(--shadow);
+}
+.stat .label { color: var(--mist); font-size: 0.8rem; font-weight: 700; text-transform: uppercase; }
+.stat .value { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 900; margin-top: 0.45rem; color: var(--amber); }
+.grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 1rem; }
+.section {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(10px);
+}
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border-bottom: 1px solid var(--line);
+}
+.section h2 { font-size: 1rem; }
+.section-note { color: var(--mist); font-size: 0.85rem; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; min-width: 760px; }
+th, td {
+  padding: 0.85rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+  font-size: 0.9rem;
+}
+th { color: var(--mist); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; }
+tbody tr:hover { background: rgba(232,168,56,0.04); }
+tr:last-child td { border-bottom: 0; }
+.name { font-weight: 700; }
+.muted { color: var(--mist); font-size: 0.84rem; }
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.18rem 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+.badge-admin { background: rgba(232,168,56,0.18); color: var(--amber); }
+.badge-user { background: rgba(255,255,255,0.08); color: var(--mist); }
+.badge-public { background: rgba(123,175,143,0.18); color: var(--sage); }
+.badge-private { background: rgba(224,92,58,0.15); color: var(--coral); }
+.actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.btn {
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.05);
+  color: var(--sand);
+  border-radius: 8px;
+  padding: 0.42rem 0.62rem;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.btn:hover { border-color: var(--amber); color: var(--amber); background: rgba(232,168,56,0.08); }
+.btn-danger { border-color: rgba(224,92,58,0.35); color: var(--coral); }
+.btn-danger:hover { background: rgba(224,92,58,0.12); border-color: var(--coral); color: var(--coral); }
+.btn-primary { background: linear-gradient(135deg, var(--amber), var(--coral)); border-color: transparent; color: var(--deep); }
+.btn-primary:hover { color: var(--deep); box-shadow: 0 6px 20px rgba(232,168,56,0.25); }
+.city-list { padding: 0.35rem 1rem 1rem; }
+.city-row {
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.city-row:last-child { border-bottom: 0; }
+.rank {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(232,168,56,0.16);
+  color: var(--amber);
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 0.8rem;
+}
+.empty { padding: 1rem; color: var(--mist); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+.detail-panel {
+  display: none;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  margin-bottom: 1rem;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.detail-panel.active { display: block; }
+.detail-body { padding: 1rem; }
+.detail-stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.mini-stat {
+  background: var(--soft);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.8rem;
+}
+.mini-stat span { display: block; color: var(--mist); font-size: 0.75rem; font-weight: 800; text-transform: uppercase; }
+.mini-stat strong { display: block; margin-top: 0.25rem; font-size: 1.15rem; color: var(--amber); }
+.trip-detail {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.9rem;
+  margin-top: 0.75rem;
+  background: rgba(255,255,255,0.03);
+}
+.trip-detail-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+.data-lines {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+.data-box {
+  background: var(--soft);
+  border-radius: 10px;
+  padding: 0.75rem;
+}
+.data-box h3 {
+  font-size: 0.82rem;
+  margin-bottom: 0.45rem;
+  color: var(--mist);
+  text-transform: uppercase;
+}
+.data-box ul { padding-left: 1rem; }
+.data-box li { margin: 0.25rem 0; font-size: 0.86rem; }
+.data-box p { color: var(--mist); font-size: 0.86rem; }
+.admin-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+  padding: 1rem;
+}
+.admin-form .full { grid-column: 1 / -1; }
+.field label {
+  display: block;
+  color: var(--mist);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  margin-bottom: 0.35rem;
+}
+.field input, .field textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.7rem 0.8rem;
+  font: inherit;
+  background: rgba(255,255,255,0.05);
+  color: var(--sand);
+}
+.field input:focus, .field textarea:focus { outline: none; border-color: var(--amber); box-shadow: 0 0 0 3px rgba(232,168,56,0.1); }
+.field input::placeholder, .field textarea::placeholder { color: rgba(184,201,192,0.45); }
+.field textarea { min-height: 86px; resize: vertical; }
+.form-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+@media (max-width: 1000px) {
+  .admin-shell { grid-template-columns: 1fr; }
+  .sidebar { position: relative; height: auto; }
+  .logout { position: static; margin-top: 1rem; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .detail-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .data-lines { grid-template-columns: 1fr; }
+  .grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .main { padding: 1rem; }
+  .topbar { align-items: stretch; flex-direction: column; }
+  .top-actions { justify-content: stretch; }
+  .currency-control, .search { max-width: none; width: 100%; }
+  .stats { grid-template-columns: 1fr; }
+  .admin-form { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="admin-shell">
+  <aside class="sidebar">
+    <div class="brand">Traveloop</div>
+    <div class="role">Admin Panel</div>
+    <button class="side-link active" data-tab="overview"><i class="fas fa-chart-line"></i> Overview</button>
+    <button class="side-link" data-tab="users"><i class="fas fa-users"></i> Users</button>
+    <button class="side-link" data-tab="trips"><i class="fas fa-route"></i> Trips</button>
+    <button class="side-link" data-tab="destinations"><i class="fas fa-map-location-dot"></i> Destinations</button>
+    <a class="side-link logout" href="{{ url_for('logout') }}"><i class="fas fa-right-from-bracket"></i> Logout</a>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1>Admin Control Center</h1>
+        <div class="admin-name">Signed in as {{ session.user_name }}</div>
+      </div>
+      <div class="top-actions">
+        <label class="currency-control">
+          <i class="fas fa-coins"></i>
+          <select id="adminCurrency" onchange="saveAdminCurrency(this.value)">
+            {% for c in currencies %}
+            <option value="{{ c.code }}" {% if c.code == currency.code %}selected{% endif %}>{{ c.code }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <div class="search">
+          <i class="fas fa-search"></i>
+          <input id="globalSearch" type="search" placeholder="Search users or trips"/>
+        </div>
+      </div>
+    </div>
+
+    <section class="stats">
+      <div class="stat"><div class="label">Users</div><div class="value">{{ stats.users }}</div></div>
+      <div class="stat"><div class="label">Admins</div><div class="value">{{ stats.admins }}</div></div>
+      <div class="stat"><div class="label">Trips</div><div class="value">{{ stats.trips }}</div></div>
+      <div class="stat"><div class="label">Public</div><div class="value">{{ stats.public_trips }}</div></div>
+      <div class="stat"><div class="label">Budget</div><div class="value">{{ currency.symbol }}{{ "%.0f"|format((stats.budget or 0) * currency.rate) }}</div></div>
+    </section>
+
+    <div class="tab-panel active" id="tab-overview">
+      <div class="grid">
+        <section class="section">
+          <div class="section-head">
+            <div>
+              <h2>Recent Trips</h2>
+              <div class="section-note">Latest trip records across all users</div>
+            </div>
+            <button class="btn btn-primary" data-go="trips">Manage Trips</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Trip</th><th>Owner</th><th>Stops</th><th>Status</th><th>Budget</th></tr></thead>
+              <tbody>
+              {% for trip in all_trips[:6] %}
+                <tr class="search-row">
+                  <td><div class="name">{{ trip.name }}</div><div class="muted">{{ (trip.created_at|string)[:10] }}</div></td>
+                  <td>{{ trip.owner_name }}<div class="muted">{{ trip.owner_email }}</div></td>
+                  <td>{{ trip.stop_count }}</td>
+                  <td><span class="badge {{ 'badge-public' if trip.is_public else 'badge-private' }}">{{ 'Public' if trip.is_public else 'Private' }}</span></td>
+                  <td>{{ currency.symbol }}{{ "%.0f"|format((trip.total_budget or 0) * currency.rate) }}</td>
+                </tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-head">
+            <div>
+              <h2>Top Destinations</h2>
+              <div class="section-note">Most added cities in itineraries</div>
+            </div>
+          </div>
+          <div class="city-list">
+            {% for city in top_cities %}
+            <div class="city-row">
+              <span class="rank">{{ loop.index }}</span>
+              <div><div class="name">{{ city.city }}</div><div class="muted">Destination activity</div></div>
+              <strong>{{ city.count }}</strong>
+            </div>
+            {% endfor %}
+            {% if not top_cities %}<div class="empty">No destination data yet.</div>{% endif %}
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-users">
+      <section class="detail-panel" id="userDetail">
+        <div class="section-head">
+          <div>
+            <h2 id="detailTitle">User Data</h2>
+            <div class="section-note" id="detailSubtitle">Connected user travel data</div>
+          </div>
+          <button class="btn" onclick="closeUserDetail()">Close</button>
+        </div>
+        <div class="detail-body" id="detailBody"></div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <div>
+            <h2>User Management</h2>
+            <div class="section-note">View connected user data, delete accounts, or promote/demote admins</div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>User</th><th>Role</th><th>Trips</th><th>Total Budget</th><th>Joined</th><th>Actions</th></tr></thead>
+            <tbody>
+            {% for u in all_users %}
+              <tr class="search-row">
+                <td><div class="name">{{ u.name }}</div><div class="muted">{{ u.email }}</div></td>
+                <td><span class="badge {{ 'badge-admin' if u.is_admin else 'badge-user' }}">{{ 'Admin' if u.is_admin else 'User' }}</span></td>
+                <td>{{ u.trip_count }}</td>
+                <td>{{ currency.symbol }}{{ "%.0f"|format((u.total_budget or 0) * currency.rate) }}</td>
+                <td>{{ (u.created_at|string)[:10] }}</td>
+                <td>
+                  <div class="actions">
+                    <button class="btn btn-primary" onclick="viewUserData({{ u.id }})">View Data</button>
+                    {% if u.id != session.user_id %}
+                    <button class="btn" onclick="toggleAdmin({{ u.id }})">{{ 'Make User' if u.is_admin else 'Make Admin' }}</button>
+                    <button class="btn btn-danger" onclick="deleteUser({{ u.id }})">Delete</button>
+                    {% else %}
+                    <span class="muted">Current admin</span>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <div class="tab-panel" id="tab-trips">
+      <section class="section">
+        <div class="section-head">
+          <div>
+            <h2>Trip Management</h2>
+            <div class="section-note">Control public/private state or delete trips</div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Trip</th><th>Owner</th><th>Dates</th><th>Stops</th><th>Status</th><th>Budget</th><th>Actions</th></tr></thead>
+            <tbody>
+            {% for trip in all_trips %}
+              <tr class="search-row">
+                <td><div class="name">{{ trip.name }}</div><div class="muted">ID #{{ trip.id }}</div></td>
+                <td>{{ trip.owner_name }}<div class="muted">{{ trip.owner_email }}</div></td>
+                <td>{{ trip.start_date or 'Not set' }}<div class="muted">{{ trip.end_date or '' }}</div></td>
+                <td>{{ trip.stop_count }}</td>
+                <td><span class="badge {{ 'badge-public' if trip.is_public else 'badge-private' }}">{{ 'Public' if trip.is_public else 'Private' }}</span></td>
+                <td>{{ currency.symbol }}{{ "%.0f"|format((trip.total_budget or 0) * currency.rate) }}</td>
+                <td>
+                  <div class="actions">
+                    <button class="btn" onclick="toggleTripPublic({{ trip.id }})">{{ 'Make Private' if trip.is_public else 'Make Public' }}</button>
+                    <button class="btn btn-danger" onclick="deleteTrip({{ trip.id }})">Delete</button>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <div class="tab-panel" id="tab-destinations">
+      <section class="section">
+        <div class="section-head">
+          <div>
+            <h2 id="destinationFormTitle">Add Popular Destination</h2>
+            <div class="section-note">These destinations appear in user search by popularity score</div>
+          </div>
+        </div>
+        <form class="admin-form" id="destinationForm">
+          <input type="hidden" id="destinationId"/>
+          <div class="field">
+            <label>Name</label>
+            <input id="destinationName" name="name" placeholder="Paris" required/>
+          </div>
+          <div class="field">
+            <label>Country</label>
+            <input id="destinationCountry" name="country" placeholder="France" required/>
+          </div>
+          <div class="field">
+            <label>Region</label>
+            <input id="destinationRegion" name="region" placeholder="Europe"/>
+          </div>
+          <div class="field">
+            <label>Cost Index</label>
+            <input id="destinationCost" name="cost_index" type="number" min="0" max="100" value="50"/>
+          </div>
+          <div class="field">
+            <label>Popularity Score</label>
+            <input id="destinationPopularity" name="popularity_score" type="number" min="0" max="100" value="80"/>
+          </div>
+          <div class="field full">
+            <label>Description</label>
+            <textarea id="destinationDescription" name="description" placeholder="Short description for users"></textarea>
+          </div>
+          <div class="form-actions full">
+            <button class="btn btn-primary" type="submit">Save Destination</button>
+            <button class="btn" type="button" onclick="resetDestinationForm()">Clear</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <div>
+            <h2>Manage Popular Destinations</h2>
+            <div class="section-note">Edit score to move a destination up or down in user search</div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Destination</th><th>Region</th><th>Cost</th><th>Popularity</th><th>Description</th><th>Actions</th></tr></thead>
+            <tbody>
+            {% for city in popular_destinations %}
+              <tr class="search-row">
+                <td><div class="name">{{ city.name }}</div><div class="muted">{{ city.country }}</div></td>
+                <td>{{ city.region or 'World' }}</td>
+                <td>{{ city.cost_index }}/100</td>
+                <td><strong>{{ city.popularity_score }}/100</strong></td>
+                <td>{{ (city.description or 'No description')[:80] }}</td>
+                <td>
+                  <div class="actions">
+                    <button class="btn" type="button" onclick='editDestination({{ {
+                      "id": city.id,
+                      "name": city.name,
+                      "country": city.country,
+                      "region": city.region or "",
+                      "cost_index": city.cost_index,
+                      "popularity_score": city.popularity_score,
+                      "description": city.description or ""
+                    }|tojson }})'>Edit</button>
+                    <button class="btn btn-danger" type="button" onclick="deleteDestination({{ city.id }})">Delete</button>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+            {% if not popular_destinations %}
+              <tr><td colspan="6" class="empty">No popular destinations added yet.</td></tr>
+            {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <div>
+            <h2>Destination Analytics</h2>
+            <div class="section-note">Where users are planning trips</div>
+          </div>
+        </div>
+        <div class="city-list">
+          {% for city in top_cities %}
+          <div class="city-row">
+            <span class="rank">{{ loop.index }}</span>
+            <div><div class="name">{{ city.city }}</div><div class="muted">Used in planned stops</div></div>
+            <strong>{{ city.count }} visits</strong>
+          </div>
+          {% endfor %}
+          {% if not top_cities %}<div class="empty">No destination data yet.</div>{% endif %}
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script>
+const tabs = document.querySelectorAll('.side-link[data-tab]');
+const panels = document.querySelectorAll('.tab-panel');
+let adminCurrencySymbol = {{ currency.symbol|tojson }};
+let adminCurrencyRate = {{ currency.rate|tojson }};
+tabs.forEach(tab => tab.addEventListener('click', () => activateTab(tab.dataset.tab)));
+document.querySelectorAll('[data-go]').forEach(btn => btn.addEventListener('click', () => activateTab(btn.dataset.go)));
+
+function activateTab(name) {
+  tabs.forEach(tab => tab.classList.toggle('active', tab.dataset.tab === name));
+  panels.forEach(panel => panel.classList.toggle('active', panel.id === 'tab-' + name));
+}
+
+document.getElementById('globalSearch').addEventListener('input', event => {
+  const q = event.target.value.toLowerCase();
+  document.querySelectorAll('.search-row').forEach(row => {
+    row.style.display = row.innerText.toLowerCase().includes(q) ? '' : 'none';
+  });
+});
+
+async function requestAction(url, options, message) {
+  if (message && !confirm(message)) return;
+  const res = await fetch(url, options);
+  if (res.ok) {
+    location.reload();
+    return;
+  }
+  const data = await res.json().catch(() => ({}));
+  alert(data.error || 'Action failed.');
+}
+
+function deleteUser(id) {
+  requestAction('/api/admin/delete_user/' + id, { method: 'DELETE' }, 'Delete this user and all their trips?');
+}
+
+function deleteTrip(id) {
+  requestAction('/api/admin/delete_trip/' + id, { method: 'DELETE' }, 'Delete this trip permanently?');
+}
+
+function toggleTripPublic(id) {
+  requestAction('/api/admin/toggle_trip_public/' + id, { method: 'POST' });
+}
+
+function toggleAdmin(id) {
+  requestAction('/api/admin/toggle_user_admin/' + id, { method: 'POST' }, 'Change this user role?');
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[char]));
+}
+
+function money(value) {
+  return adminCurrencySymbol + (Number(value || 0) * Number(adminCurrencyRate || 1)).toFixed(0);
+}
+
+async function saveAdminCurrency(code) {
+  const res = await fetch('/api/admin/currency', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ currency: code })
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    alert(data.error || 'Could not update currency.');
+    return;
+  }
+  adminCurrencySymbol = data.currency.symbol;
+  adminCurrencyRate = data.currency.rate;
+  location.reload();
+}
+
+function listItems(items, renderItem, emptyText) {
+  if (!items || !items.length) return `<p>${escapeHtml(emptyText)}</p>`;
+  return `<ul>${items.map(renderItem).join('')}</ul>`;
+}
+
+async function viewUserData(id) {
+  const panel = document.getElementById('userDetail');
+  const title = document.getElementById('detailTitle');
+  const subtitle = document.getElementById('detailSubtitle');
+  const body = document.getElementById('detailBody');
+  panel.classList.add('active');
+  title.textContent = 'Loading user data...';
+  subtitle.textContent = 'Fetching connected data from database';
+  body.innerHTML = '<div class="empty">Loading...</div>';
+
+  const res = await fetch('/api/admin/user/' + id);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    title.textContent = 'User data unavailable';
+    subtitle.textContent = data.error || 'Could not load user data';
+    body.innerHTML = '';
+    return;
+  }
+
+  const user = data.user;
+  title.textContent = user.name;
+  subtitle.textContent = `${user.email} • ${user.is_admin ? 'Admin' : 'User'} • Joined ${String(user.created_at).slice(0, 10)}`;
+
+  const tripsHtml = data.trips.length ? data.trips.map(trip => `
+    <div class="trip-detail">
+      <div class="trip-detail-head">
+        <div>
+          <div class="name">${escapeHtml(trip.name)}</div>
+          <div class="muted">${escapeHtml(trip.start_date || 'No start date')} ${trip.end_date ? 'to ' + escapeHtml(trip.end_date) : ''}</div>
+          <div class="muted">${escapeHtml(trip.description || 'No description')}</div>
+        </div>
+        <span class="badge ${trip.is_public ? 'badge-public' : 'badge-private'}">${trip.is_public ? 'Public' : 'Private'}</span>
+      </div>
+      <div class="data-lines">
+        <div class="data-box">
+          <h3>Stops</h3>
+          ${listItems(trip.stops, stop => `<li>${escapeHtml(stop.city)}${stop.country ? ', ' + escapeHtml(stop.country) : ''}</li>`, 'No stops added')}
+        </div>
+        <div class="data-box">
+          <h3>Budget</h3>
+          ${listItems(trip.budget_items, item => `<li>${escapeHtml(item.category)}: est ${money(item.estimated_cost)}, actual ${money(item.actual_cost)}</li>`, 'No budget items')}
+        </div>
+        <div class="data-box">
+          <h3>Notes</h3>
+          ${listItems(trip.notes, note => `<li>${escapeHtml(note.content).slice(0, 90)}</li>`, 'No notes')}
+        </div>
+      </div>
+    </div>
+  `).join('') : '<div class="empty">This user has not created any trips yet.</div>';
+
+  body.innerHTML = `
+    <div class="detail-stats">
+      <div class="mini-stat"><span>Trips</span><strong>${user.trip_count}</strong></div>
+      <div class="mini-stat"><span>Stops</span><strong>${user.stop_count}</strong></div>
+      <div class="mini-stat"><span>Activities</span><strong>${user.activity_count}</strong></div>
+      <div class="mini-stat"><span>Notes</span><strong>${user.note_count}</strong></div>
+      <div class="mini-stat"><span>Budget</span><strong>${money(user.total_budget)}</strong></div>
+    </div>
+    ${tripsHtml}
+  `;
+}
+
+function closeUserDetail() {
+  document.getElementById('userDetail').classList.remove('active');
+}
+
+const destinationForm = document.getElementById('destinationForm');
+destinationForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  const id = document.getElementById('destinationId').value;
+  const payload = getDestinationPayload();
+  const res = await fetch(id ? '/api/admin/destinations/' + id : '/api/admin/destinations', {
+    method: id ? 'PUT' : 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (res.ok) {
+    location.reload();
+    return;
+  }
+  const data = await res.json().catch(() => ({}));
+  alert(data.error || 'Could not save destination.');
+});
+
+function getDestinationPayload() {
+  return {
+    name: document.getElementById('destinationName').value,
+    country: document.getElementById('destinationCountry').value,
+    region: document.getElementById('destinationRegion').value,
+    cost_index: document.getElementById('destinationCost').value,
+    popularity_score: document.getElementById('destinationPopularity').value,
+    description: document.getElementById('destinationDescription').value
+  };
+}
+
+function editDestination(city) {
+  activateTab('destinations');
+  document.getElementById('destinationFormTitle').textContent = 'Edit Popular Destination';
+  document.getElementById('destinationId').value = city.id;
+  document.getElementById('destinationName').value = city.name || '';
+  document.getElementById('destinationCountry').value = city.country || '';
+  document.getElementById('destinationRegion').value = city.region || '';
+  document.getElementById('destinationCost').value = city.cost_index ?? 50;
+  document.getElementById('destinationPopularity').value = city.popularity_score ?? 50;
+  document.getElementById('destinationDescription').value = city.description || '';
+  destinationForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function resetDestinationForm() {
+  document.getElementById('destinationFormTitle').textContent = 'Add Popular Destination';
+  destinationForm.reset();
+  document.getElementById('destinationId').value = '';
+  document.getElementById('destinationCost').value = 50;
+  document.getElementById('destinationPopularity').value = 80;
+}
+
+function deleteDestination(id) {
+  requestAction('/api/admin/destinations/' + id, { method: 'DELETE' }, 'Delete this popular destination?');
+}
+</script>
+</body>
+</html>

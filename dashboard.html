@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}Dashboard – Traveloop{% endblock %}
+{% block head %}
+<style>
+.hero {
+  background: linear-gradient(135deg, rgba(232,168,56,0.1), rgba(224,92,58,0.06));
+  border: 1px solid var(--border);
+  border-radius: 20px; padding: 2.5rem;
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 2.5rem; flex-wrap: wrap; gap: 1.5rem;
+  position: relative; overflow: hidden;
+}
+.hero::before {
+  content:''; position:absolute;
+  width:300px;height:300px;
+  background: radial-gradient(circle, rgba(232,168,56,0.08), transparent 70%);
+  right:-80px;top:-80px;
+}
+.hero-text h1 { font-size: 2.2rem; line-height: 1.2; }
+.hero-text h1 span { color: var(--amber); }
+.hero-text p { color: var(--mist); margin-top: 0.6rem; font-size: 1rem; }
+.hero-actions { display: flex; gap: 1rem; flex-wrap: wrap; }
+.stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 2.5rem; }
+.stat-card {
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: 14px; padding: 1.3rem 1.5rem;
+  display: flex; flex-direction: column; gap: 0.3rem;
+}
+.stat-card .stat-val { font-family: 'Playfair Display', serif; font-size: 2.2rem; color: var(--amber); }
+.stat-card .stat-label { font-size: 0.82rem; color: var(--mist); font-weight: 500; }
+.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem; }
+.section-header h2 { font-size: 1.4rem; }
+.trips-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.2rem; margin-bottom: 2.5rem; }
+.trip-card {
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+  transition: all 0.25s; text-decoration: none; display: block;
+}
+.trip-card:hover { transform: translateY(-4px); border-color: var(--amber); box-shadow: 0 12px 32px rgba(0,0,0,0.3); }
+.trip-card-header {
+  height: 100px;
+  background: linear-gradient(135deg, var(--ocean), rgba(232,168,56,0.2));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2.5rem;
+  position: relative;
+}
+.trip-card-header .share-badge {
+  position: absolute; top: 0.6rem; right: 0.6rem;
+  background: rgba(123,175,143,0.25); border: 1px solid rgba(123,175,143,0.4);
+  color: var(--sage); font-size: 0.7rem; font-weight: 600;
+  padding: 0.15rem 0.5rem; border-radius: 20px;
+}
+.trip-card-body { padding: 1.2rem; }
+.trip-card-body h3 { font-size: 1.05rem; color: var(--sand); margin-bottom: 0.3rem; }
+.trip-meta { font-size: 0.8rem; color: var(--mist); display: flex; gap: 0.8rem; flex-wrap: wrap; }
+.trip-meta span { display: flex; align-items: center; gap: 0.3rem; }
+.dest-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; }
+.dest-card {
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: 14px; padding: 1.2rem;
+  display: flex; justify-content: space-between; align-items: center;
+  transition: all 0.2s;
+}
+.dest-card:hover { border-color: var(--amber); transform: scale(1.02); }
+.dest-info { display: flex; flex-direction: column; gap: 0.2rem; }
+.dest-info .city-name { font-weight: 600; font-size: 0.95rem; color: var(--sand); }
+.dest-info .country-name { font-size: 0.78rem; color: var(--mist); }
+.dest-right { display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem; }
+.dest-emoji { font-size: 1.8rem; }
+.temp { font-size: 0.78rem; color: var(--mist); }
+</style>
+{% endblock %}
+{% block content %}
+<div class="container fade-up">
+  <div class="hero">
+    <div class="hero-text">
+      <h1>Hello, <span>{{ session.user_name.split()[0] }}</span> 👋</h1>
+      <p>Ready to plan your next adventure? The world is waiting.</p>
+    </div>
+    <div class="hero-actions">
+      <a href="{{ url_for('create_trip') }}" class="btn btn-primary"><i class="fas fa-plus"></i> Plan New Trip</a>
+      <a href="{{ url_for('my_trips') }}" class="btn btn-ghost"><i class="fas fa-map"></i> My Trips</a>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card">
+      <span class="stat-val">{{ total_trips }}</span>
+      <span class="stat-label">🗺️ Trips Planned</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-val">{{ total_cities }}</span>
+      <span class="stat-label">🏙️ Cities Explored</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-val">{{ upcoming|length }}</span>
+      <span class="stat-label">📅 Upcoming Trips</span>
+    </div>
+  </div>
+
+  {% if trips %}
+  <div class="section-header">
+    <h2>Recent Trips</h2>
+    <a href="{{ url_for('my_trips') }}" class="btn btn-ghost btn-sm">View All →</a>
+  </div>
+  <div class="trips-grid">
+    {% set emojis = ['🗺️','✈️','🌍','🏖️','🏔️','🌆'] %}
+    {% for trip in trips %}
+    <a href="{{ url_for('itinerary_view', trip_id=trip.id) }}" class="trip-card">
+      <div class="trip-card-header">
+        {{ emojis[loop.index0 % 6] }}
+        {% if trip.is_public %}<span class="share-badge">Public</span>{% endif %}
+      </div>
+      <div class="trip-card-body">
+        <h3>{{ trip.name }}</h3>
+        <div class="trip-meta">
+          {% if trip.start_date %}<span><i class="fas fa-calendar"></i> {{ trip.start_date }}</span>{% endif %}
+          {% if trip.total_budget %}<span><i class="fas fa-wallet"></i> ${{ "%.0f"|format(trip.total_budget) }}</span>{% endif %}
+        </div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="section-header">
+    <h2>Popular Destinations</h2>
+  </div>
+  <div class="dest-grid">
+    {% for d in destinations %}
+    <div class="dest-card">
+      <div class="dest-info">
+        <span class="city-name">{{ d.city }}</span>
+        <span class="country-name">{{ d.country }}</span>
+        <span style="margin-top:0.3rem"><span class="badge badge-amber" style="font-size:0.7rem">{{ d.tag }}</span></span>
+      </div>
+      <div class="dest-right">
+        <span class="dest-emoji">{{ d.emoji }}</span>
+        <span class="temp">{{ d.temp }}</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
